@@ -4,6 +4,45 @@
 [![npm](https://img.shields.io/npm/v/ibackuptool.svg)](http://npmjs.com/ibackuptool)
 ![license](https://img.shields.io/github/license/richinfante/iphonebackuptools.svg)
 
+## Qustodio changes 
+This is a fork of the original project by [@richinfante](https://github.com/richinfante/iphonebackuptools).
+The modifications allows you to obtain information from an encrypted backup, **but it has significant limitations. This module operates with internal state, so information can only be obtained from one device at a time**. In other words, parallel operations can cause errors or unexpected behaviors.
+
+### How does this fork work?
+It decrypts the manifest into a file named manifest-un and then, for each report query, it opens a database by reading the decrypted manifest to obtain the file ID and subsequently consults it with MySQLLite.
+
+### Support and type definitions for TypeScript are also added for the reports.
+
+* backups.list
+* messages.all
+* phone.calls
+* phone.address_book
+
+### Example: 
+```js
+/*
+To allow the use of encrypted backups, 
+it is essential to call the configure method before any calls to report.
+*/
+await bt.configure({
+  base: BACKUP_PATH,
+  id: DEVICE_ID,
+  password: PASSWORD_BACKUP,
+});
+
+const [report, messages, calls, addressBook] = await Promise.all([
+  bt.run('backups.list', {}),
+  bt.run('messages.all', { backup: DEVICE_ID }),
+  bt.run('phone.calls', { backup: DEVICE_ID }),
+  bt.run('phone.address_book', { backup: DEVICE_ID }),
+]);
+
+console.log({ report, calls, addressBook, messages });
+```
+
+## What is this?
+
+
 Are _you_ storing unencrypted iPhone backups on your personal computer? With very little effort, we can dump **all** the saved messages from the backup, as well as notes, photo locations, and other data. 
 
 Check out my recently updated post about my work on backups here: [Reverse Engineering the iOS Backup](https://www.richinfante.com/2017/3/16/reverse-engineering-the-ios-backup)

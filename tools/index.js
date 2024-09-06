@@ -3,16 +3,19 @@ const log = require('./util/log')
 const report = require('./reports')
 const matcher = require('./util/matcher')
 const Group = report.Group
-const Backup = require('./backup')
+const Backup = require('./backup-encrypted')
 const os = require('os')
 
 // Backup source directory (macos)
 var backupDirectory = path.join(os.homedir(), '/Library/Application Support/MobileSync/Backup/')
 
+// This flag is used to validate whether the use of encrypted backups has been configured.
+var __isBackupEncryptedConfigured__ = false
+
 const osType = process.platform
 
 // Set windows backup directory
-if (osType === "win32") {
+if (osType === 'win32') {
   backupDirectory = path.join(require('os').homedir(), '\\Apple\\MobileSync\\Backup')
 }
 
@@ -142,6 +145,9 @@ function compileReport (report, result, { raw }) {
  * @param {Object=} params parameters.
  */
 function run (query, params) {
+  if (!__isBackupEncryptedConfigured__) {
+    return Promise.reject(new Error('Backup encryption is not configured. Please configure it using the configure method.'))
+  }
   params = params || {}
   return new Promise(async (resolve, reject) => {
     try {
@@ -178,7 +184,7 @@ function runReport (report, params) {
         return reject(new Error('Please specify the `backup` parameter to run this report.'))
       }
 
-      backup = new Backup(backupDirectory, params.backup)
+      backup = new Backup(backupDirectory, params.backup, params.password)
     }
 
     // Input params to func
@@ -191,6 +197,30 @@ function runReport (report, params) {
       .then(resolve)
       .catch(reject)
   })
+}
+
+/**
+ * Configures the backup by setting the backup directory and initializing
+ * the `Backup` instance. This function also loads the backup and marks
+ * that encrypted backup configuration has been set.
+ *
+ * @param {Object} params - The configuration parameters.
+ * @param {string} params.base - The base directory for the backup.
+ * @param {string} params.id - The identifier for the backup.
+ * @param {string} params.password - The password for the backup.
+ *
+ * @returns {Promise<void>} A promise that resolves when the configuration
+ * is complete.
+ *
+ * @throws {Error} Throws an error if the `Backup` instance cannot be loaded.
+ *
+ * @async
+ */
+async function configure ({ base, id, password }) {
+  backupDirectory = base
+  const backup = new Backup(base, id, password)
+  await backup.load()
+  __isBackupEncryptedConfigured__ = true
 }
 
 module.exports = {
@@ -222,5 +252,8 @@ module.exports = {
   // misc
   setLogLevel (lvl) {
     log.setVerbose(lvl)
-  }
+  },
+
+  // mode management
+  configure
 }
