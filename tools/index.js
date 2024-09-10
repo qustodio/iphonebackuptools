@@ -223,6 +223,27 @@ async function configure ({ base, id, password }) {
   __isBackupEncryptedConfigured__ = true
 }
 
+/**
+ * Releases all open database connections associated with the backup.
+ *
+ * It is essential to release the connections because, in some operating systems
+ * (like Windows), deleting the backup folder without releasing the connection
+ * can cause errors due to database files still being in use.
+ *
+ * @async
+ * @function
+ * @param {Object} params - Parameters required to initialize the backup connection.
+ * @param {string} params.base - The base path of the backup.
+ * @param {string} params.id - The identifier of the database.
+ * @param {string} params.password - The password to access the database.
+ *
+ * @returns {Promise<void>} A promise that resolves when all connections have been released.
+ */
+async function releaseConnections ({ base, id, password }) {
+  const backup = new Backup(base, id, password)
+  await backup.closeAllOpenDBs()
+}
+
 module.exports = {
   // Exported Libraries
   Backup,
@@ -255,5 +276,6 @@ module.exports = {
   },
 
   // mode management
-  configure
+  configure,
+  releaseConnections
 }
