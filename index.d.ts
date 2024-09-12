@@ -21,7 +21,7 @@ export interface BackupReport {
     address: string;
   }
   
-  export interface Message {
+  export interface SMSMessage {
     id: number;
     date: string;
     sender: string;
@@ -36,13 +36,13 @@ export interface BackupReport {
     attachments: any[];
   }
   
-  export interface Chat {
+  export interface SMSChat {
     id: number;
     date: string;
     service: string;
     chatName: string;
     displayName: string;
-    messages: Message[];
+    messages: SMSMessage[];
   }
   
   export interface Contact {
@@ -71,15 +71,18 @@ export interface BackupReport {
   }
   
   declare function run(command: "backups.list"): Promise<BackupReport[]>;
-  declare function run(command: "messages.all", options: { backup: string }): Promise<Chat[]>;
+  declare function run(command: "messages.all", options: { backup: string }): Promise<SMSChat[]>;
   declare function run(command: "phone.calls", options: { backup: string }): Promise<Call[]>;
   declare function run(command: "phone.address_book", options: { backup: string }): Promise<Contact[]>;
   
   declare function configure(options: { base: string; id: string; password: string; }): Promise<void>;
+
+  declare function releaseConnections(options: { base: string; id: string; password: string; }): Promise<void>;
   
   export interface Ibackuptool {
     configure: typeof configure;
     run: typeof run;
+    releaseConnections: typeof releaseConnections;
   }
   
   declare const ibackuptool: Ibackuptool;
