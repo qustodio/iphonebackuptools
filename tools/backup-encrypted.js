@@ -10,7 +10,6 @@ const pbkdf2Hmac = require('pbkdf2-hmac')
 const bigintConversion = require('bigint-conversion')
 const sqlite3 = require('sqlite3').verbose()
 const filehash = require('ibackuptool/tools/util/backup_filehash')
-const { remove } = require('fs-extra')
 
 function aesDecrypt (keyString, input) {
   // eslint-disable-next-line new-cap
@@ -380,7 +379,6 @@ class BackupEncrypted {
     const dbs = Object.values(this.openDBs)
     await Promise.all(dbs.map((db) => closeDBConnection(db)))
     this.openDBs = {}
-    await remove(this.path)
   }
 }
 
