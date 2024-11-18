@@ -6,7 +6,9 @@
   "types": "index.d.ts",
   "scripts": {
     "test": "tap tests",
-    "start": "node tools/cli.js"
+    "start": "node tools/cli.js",
+    "inspect": "node scripts/inspect.js",
+    "sandbox": "node scripts/sandbox.js"
   },
   "bin": {
     "ibackuptool": "tools/cli.js"
@@ -35,6 +37,7 @@
     "strip-ansi": "^4.0.0"
   },
   "devDependencies": {
+    "dotenv": "^16.4.5",
     "eslint": "^4.19.1",
     "eslint-plugin-import": "^2.22.0",
     "eslint-plugin-node": "^6.0.1",

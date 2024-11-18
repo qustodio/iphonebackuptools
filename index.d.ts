@@ -69,11 +69,34 @@ export interface BackupReport {
     address: string | null;
     city: string | null;
   }
+
+  export interface WhatsAppGroupParticipant {
+    chatID: number;
+    participantID: string;
+    interlocutor: string;
+    interlocutorAlias: string | null;
+    isSender: boolean;
+  }
+
+  export interface WhatsAppMessage {
+    id: number;
+    type: 'GROUP' | 'DIRECT';
+    chatID: number;
+    content: string;
+    sender: string | null;
+    receiver: string | null;
+    timestamp: number;
+    interlocutor: string;
+    interlocutorAlias: string | null;
+    participants: WhatsAppGroupParticipant[];
+  }
   
   declare function run(command: "backups.list"): Promise<BackupReport[]>;
   declare function run(command: "messages.all", options: { backup: string }): Promise<SMSChat[]>;
   declare function run(command: "phone.calls", options: { backup: string }): Promise<Call[]>;
   declare function run(command: "phone.address_book", options: { backup: string }): Promise<Contact[]>;
+  declare function run(command: "messages.whatsapp", options: { backup: string }): Promise<WhatsAppMessage[]>;
+
   
   declare function configure(options: { base: string; id: string; password: string; }): Promise<void>;
 
