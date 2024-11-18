@@ -9,7 +9,8 @@ const bigInt = require('big-integer')
 const pbkdf2Hmac = require('pbkdf2-hmac')
 const bigintConversion = require('bigint-conversion')
 const sqlite3 = require('sqlite3').verbose()
-const filehash = require('ibackuptool/tools/util/backup_filehash')
+const filehash = require('../tools/util/backup_filehash')
+const log = require('./util/log')
 
 function aesDecrypt (keyString, input) {
   // eslint-disable-next-line new-cap
@@ -319,13 +320,7 @@ class BackupEncrypted {
     })
   }
 
-  async openDatabase (fileID) {
-    if (this.openDBs[fileID]) {
-      return new Promise((resolve) => {
-        resolve(this.openDBs[fileID])
-      })
-    }
-
+  async getDatabaseDecryptedFile (fileID) {
     return new Promise((resolve, reject) => {
       try {
         this.db.get(`SELECT * FROM Files WHERE fileID='${fileID}'`, async (err, fileMetadata) => {
@@ -338,6 +333,7 @@ class BackupEncrypted {
             try {
               const key = await this.getEncryptionKey(fileMetadata.file)
               const filename = path.join(this.path, fileMetadata.fileID.slice(0, 2), fileMetadata.fileID)
+              log.verbose(`The database is located in the file: ${filename}`)
               const encryptedData = fs.readFileSync(filename)
               const decryptedData = aesDecryptCBC(key, encryptedData)
               fs.writeFileSync(filename + '-decrypted', decryptedData)
@@ -350,11 +346,22 @@ class BackupEncrypted {
       } catch (e) {
         reject(e)
       }
-    }).then(async (filename) => {
-      const decryptedDB = await this.openDatabaseDecrypted(filename)
-      this.openDBs[fileID] = decryptedDB
-      return decryptedDB
     })
+  }
+
+  async openDatabase (fileID) {
+    if (this.openDBs[fileID]) {
+      return new Promise((resolve) => {
+        resolve(this.openDBs[fileID])
+      })
+    }
+
+    return this.getDatabaseDecryptedFile(fileID)
+      .then(async (filename) => {
+        const decryptedDB = await this.openDatabaseDecrypted(filename)
+        this.openDBs[fileID] = decryptedDB
+        return decryptedDB
+      })
   }
 
   /**

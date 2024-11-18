@@ -3,7 +3,7 @@ const path = require('path')
 const log = require('../../util/log')
 const manifestMBDBParse = require('../../util/manifest_mbdb_parse')
 const plist = require('../../util/plist')
-const Mode = require('stat-mode');
+const Mode = require('stat-mode')
 
 module.exports = {
   version: 4,
