@@ -95,7 +95,7 @@ export interface BackupReport {
   declare function run(command: "messages.all", options: { backup: string }): Promise<SMSChat[]>;
   declare function run(command: "phone.calls", options: { backup: string }): Promise<Call[]>;
   declare function run(command: "phone.address_book", options: { backup: string }): Promise<Contact[]>;
-  declare function run(command: "messages.whatsapp", options: { backup: string }): Promise<WhatsAppMessage[]>;
+  declare function run(command: "messages.whatsapp", options: { backup: string, fromUnixTimestamp?: number }): Promise<WhatsAppMessage[]>;
 
   
   declare function configure(options: { base: string; id: string; password: string; }): Promise<void>;
