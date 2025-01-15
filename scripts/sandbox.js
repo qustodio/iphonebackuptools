@@ -2,6 +2,14 @@ const bt = require('../tools/index')
 const env = require('dotenv')
 const { join } = require('path')
 
+const unixTSFromToday = () => {
+  const currentDate = new Date()
+  const startOfDay = new Date(currentDate)
+  startOfDay.setHours(0, 0, 0, 0)
+  const unixTimestampStartOfDay = Math.floor(startOfDay.getTime() / 1000);
+  return unixTimestampStartOfDay
+}
+
 const main = async ({ BACKUP_PATH, APPLE_UDID, PASSWORD_BACKUP }) => {
   await bt.configure({
     base: BACKUP_PATH,
@@ -14,7 +22,7 @@ const main = async ({ BACKUP_PATH, APPLE_UDID, PASSWORD_BACKUP }) => {
     bt.run('messages.all', { backup: APPLE_UDID }),
     bt.run('phone.calls', { backup: APPLE_UDID }),
     bt.run('phone.address_book', { backup: APPLE_UDID }),
-    bt.run('messages.whatsapp', { backup: APPLE_UDID })
+    bt.run('messages.whatsapp', { backup: APPLE_UDID, fromUnixTimestamp: unixTSFromToday() })
   ])
 
   console.log(JSON.stringify({ report, messages, calls, addressBook, whatsappMessages }, null, 2))

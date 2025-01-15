@@ -14,10 +14,12 @@ module.exports = {
   description: `List WhatsApp messages`,
   requiresBackup: true,
 
-  async run (lib, { backup }) {
+  async run (lib, { backup, fromUnixTimestamp }) {
     const database = await backup.openDatabase(WHATSAPP_DB)
 
-    const whatsappTextMessages = await getWhatsappTextMessages(database)
+    const whatsappTextMessages = await getWhatsappTextMessages(database, {
+      fromUnixTimestamp
+    })
 
     return parallel(
       (row) => includesParticipants(database, row),
@@ -35,13 +37,14 @@ module.exports = {
     timestamp: (row) => appleTimestamp.toUnixTimeStamp(row.ZMESSAGEDATE),
     interlocutor: (row) => row.ZPARTNERNAME, // The other group or person the device is talking to
     interlocutorAlias: (row) => row.PROFILE_PUSHNAME, // The other group or person's alias
-    participants: (row) => row.PARTICIPANTS.map((participant) => ({
-      chatID: participant.ZCHATSESSION,
-      interlocutor: participant.ZPARTNERNAME,
-      interlocutorAlias: participant.ZPUSHNAME,
-      participantID: participant.ZMEMBERJID,
-      isSender: row.ZMEMBERJID === participant.ZMEMBERJID
-    }))
+    participants: (row) =>
+      row.PARTICIPANTS.map((participant) => ({
+        chatID: participant.ZCHATSESSION,
+        interlocutor: participant.ZPARTNERNAME,
+        interlocutorAlias: participant.ZPUSHNAME,
+        participantID: participant.ZMEMBERJID,
+        isSender: row.ZMEMBERJID === participant.ZMEMBERJID
+      }))
   }
 }
 
@@ -49,7 +52,14 @@ const getType = (el) => (el.PROFILE_PUSHNAME === null ? 'GROUP' : 'DIRECT')
 
 const isTypeGroup = (el) => getType(el) === 'GROUP'
 
-const getWhatsappTextMessages = (database) => {
+const getWhatsappTextMessages = (database, { fromUnixTimestamp }) => {
+  /*
+  It is important to note that in the database tables,
+  timestamps are stored as Mac Absolute Time, while the API used by the reporters exposes timestamps as Unix timestamps. 
+  Therefore, both input and output should be Unix timestamps,
+  with internal conversion to
+  Mac Absolute Time necessary for proper interoperability with the tables.
+  */
   return queryAll({
     database,
     sql: `
@@ -82,7 +92,14 @@ const getWhatsappTextMessages = (database) => {
       ON
           ZWAGROUPMEMBER.Z_PK = ZWAMESSAGE.ZGROUPMEMBER 
       WHERE
-          ZWAMESSAGE.ZMESSAGETYPE = 0;`
+          ZWAMESSAGE.ZMESSAGETYPE = 0 ${
+  !fromUnixTimestamp
+    ? ';'
+    : ` AND ZWAMESSAGE.ZMESSAGEDATE > ${appleTimestamp.toMacAbsoluteTime(
+      fromUnixTimestamp
+    )};`
+}    
+      `
   })
 }
 
