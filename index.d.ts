@@ -70,15 +70,15 @@ export interface BackupReport {
     city: string | null;
   }
 
-  export interface WhatsAppGroupParticipant {
+  export interface AppMessageGroupParticipant {
     chatID: number;
     participantID: string;
     interlocutor: string;
-    interlocutorAlias: string | null;
+    interlocutorAlias: string;
     isSender: boolean;
   }
 
-  export interface WhatsAppMessage {
+  export interface AppMessage {
     id: number;
     type: 'GROUP' | 'DIRECT';
     chatID: number;
@@ -88,7 +88,31 @@ export interface BackupReport {
     timestamp: number;
     interlocutor: string;
     interlocutorAlias: string | null;
+    participants: AppMessageGroupParticipant[];
+  }
+
+  export interface WhatsAppGroupParticipant extends AppMessageGroupParticipant {
+    interlocutor: string;
+    interlocutorAlias: string | null;
+  }
+
+  export interface WhatsAppMessage extends AppMessage {
+    interlocutor: string;
+    interlocutorAlias: string | null;
     participants: WhatsAppGroupParticipant[];
+  }
+
+  export interface LineGroupParticipant extends AppMessageGroupParticipant {
+    interlocutor: string;
+    interlocutorAlias: string;
+    participantID: number;
+  }
+
+  export interface LineMessage extends AppMessage {
+    id: string;
+    interlocutor: null;
+    interlocutorAlias: null;
+    participants: LineGroupParticipant[]
   }
   
   declare function run(command: "backups.list"): Promise<BackupReport[]>;
@@ -96,6 +120,7 @@ export interface BackupReport {
   declare function run(command: "phone.calls", options: { backup: string }): Promise<Call[]>;
   declare function run(command: "phone.address_book", options: { backup: string }): Promise<Contact[]>;
   declare function run(command: "messages.whatsapp", options: { backup: string, fromUnixTimestamp?: number }): Promise<WhatsAppMessage[]>;
+  declare function run(command: "messages.line", options: { backup: string, fromUnixTimestamp?: number }): Promise<LineMessage[]>;
 
   
   declare function configure(options: { base: string; id: string; password: string; }): Promise<void>;
