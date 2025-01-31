@@ -350,6 +350,20 @@ class BackupEncrypted {
   }
 
   async openDatabase (fileID) {
+    if (typeof fileID === 'function') {
+      /*
+    This case is very particular because there are databases that do not
+    have a fixed structure. In order to provide support
+    for the reporters, it is necessary to be able to
+    make queries to determine the fileID.
+    */
+      fileID = await fileID((query) => {
+        return new Promise((resolve, reject) => {
+          this.db.get(query, (err, data) => err ? reject(err) : resolve(data))
+        })
+      })
+    };
+
     if (this.openDBs[fileID]) {
       return new Promise((resolve) => {
         resolve(this.openDBs[fileID])

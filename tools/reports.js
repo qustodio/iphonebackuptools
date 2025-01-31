@@ -49,7 +49,8 @@ module.exports.types = {
     conversations: require('./reports/messages/conversations'),
     messages: require('./reports/messages/messages'),
     conversations_full: require('./reports/messages/conversations_full'),
-    whatsapp: require('./reports/messages/whatsapp')
+    whatsapp: require('./reports/messages/whatsapp'),
+    line: require('./reports/messages/line')
   }),
 
   // Safari Data
