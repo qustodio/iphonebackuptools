@@ -1,5 +1,5 @@
 const { secondsToMs, msToSeconds } = require('../../util/time')
-const { queryAll } = require("../../util/query");
+const { queryAll, queryOne } = require("../../util/query");
 const { parallel, fork } = require("../../util/async");
 const {
   toIdentityMap,
@@ -7,6 +7,7 @@ const {
   mapObj,
   indexedMapBy,
   groupBy,
+  memoize,
 } = require("../../util/data");
 
 /*
@@ -98,6 +99,7 @@ module.exports = {
     );
 
     const formattedMessages = format({
+      database: messagesDatabase,
       messages,
       users,
       usersByChat,
@@ -218,6 +220,38 @@ const findGroupChatExternalIds = async (database) => {
   return groupChats.map((chat) => chat.chatExternalId);
 };
 
+/**
+ * To obtain who the message was sent to in direct conversations, 
+ * it is necessary to do it using the same table, 
+ * as it is the only possible way to relate them.
+ * This method will be called many times, 
+ * which is why it is memoized.
+ */
+const findChatReceiver = memoize(
+  ({ chatId }) => chatId,
+  ({ database, chatId }) => {
+    return queryOne({
+      database: database,
+      sql: `
+      SELECT DISTINCT
+        ZUSER.ZNAME AS SenderName,
+        ZUSER.ZMID AS UserExternalId
+      FROM
+          ZMESSAGE
+      LEFT JOIN 
+          ZUSER 
+          ON ZUSER.Z_PK = ZMESSAGE.ZSENDER
+      LEFT JOIN 
+          ZCHAT 
+          ON ZCHAT.Z_PK = ZMESSAGE.ZCHAT
+      WHERE 
+          ZCHAT.Z_PK = ${chatId} 
+          AND ZMESSAGE.ZSENDER IS NOT NULL;`
+    })
+  }
+)
+
+
 const findUsersByChat = async ({ usersGroupDatabase, chatExternalId }) => {
   /*
   In Line, the information about groups and messages is fragmented across two different databases,
@@ -269,12 +303,8 @@ const findUsersByChat = async ({ usersGroupDatabase, chatExternalId }) => {
   return uniqueBy((member) => member.UserId, members.flat());
 };
 
-const format = ({ messages, users, usersByChat }) => {
+const format = async ({ database, messages, users, usersByChat }) => {
   const normalizedUsersById = indexedMapBy((user) => user.UserId, users);
-  const normalizedMessagesByChatExternalId = groupBy(
-    (message) => message.ChatExternalId,
-    messages
-  );
 
   const usersByChatGroup = mapObj(
     (users) =>
@@ -285,18 +315,18 @@ const format = ({ messages, users, usersByChat }) => {
     usersByChat
   );
 
-  return messages.map((message) => {
+  return parallel(async (message) => {
     const isChatGroupMessage = message.ChatType === CHAT_TYPE_GROUP_MESSAGE;
     const type = isChatGroupMessage ? "GROUP" : "DIRECT";
     const participants = isChatGroupMessage
       ? usersByChatGroup[message.ChatExternalId]
       : [];
 
-    const ReceiverName = getReceiverName({
+    const ReceiverName = await getReceiverName({
+      database,
       message,
       isChatGroupMessage,
-      usersByChatGroup,
-      normalizedMessagesByChatExternalId,
+      usersByChatGroup
     });
 
     return {
@@ -306,14 +336,14 @@ const format = ({ messages, users, usersByChat }) => {
       UnixMessageTimestamp: msToSeconds(message.MessageTimestamp),
       Participants: participants,
     };
-  });
+  }, messages);
 };
 
-const getReceiverName = ({
+const getReceiverName = async ({
+  database,
   message,
   isChatGroupMessage,
-  usersByChatGroup,
-  normalizedMessagesByChatExternalId,
+  usersByChatGroup
 }) => {
   // ReceiverName is GroupName
   if (isChatGroupMessage) {
@@ -326,8 +356,11 @@ const getReceiverName = ({
     return null;
   }
 
-  //  Infer the name of the receiver from the opposite in the messages.
-  return normalizedMessagesByChatExternalId[message.ChatExternalId]?.find(
-    (msg) => msg.SenderName !== null
-  )?.SenderName;
+  const receiver = await findChatReceiver({
+    database, 
+    chatId: message.ChatID
+  })
+
+  return receiver?.SenderName ?? 'UNKNOWN'
+  
 };
