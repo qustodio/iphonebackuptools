@@ -29,5 +29,19 @@ module.exports = {
         [k]: item
       }
     }, {})
+  },
+  memoize: (keyFn, fn) => {
+    const cache = new Map()
+
+    return (...args) => {
+      const key = keyFn(...args)
+      if (cache.has(key)) {
+        return cache.get(key)
+      }
+
+      const result = fn(...args)
+      cache.set(key, result)
+      return result
+    }
   }
 }

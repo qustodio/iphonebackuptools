@@ -6,6 +6,15 @@ const queryAll = ({ database, sql }) => {
   })
 }
 
+const queryOne = ({ database, sql }) => {
+  return new Promise((resolve, reject) => {
+    database.get(sql, (err, rows) => {
+      return (err) ? reject(err) : resolve(rows)
+    })
+  })
+}
+
 module.exports = {
-  queryAll
+  queryAll,
+  queryOne
 }
