@@ -221,11 +221,8 @@ const findGroupChatExternalIds = async (database) => {
 };
 
 /**
- * To obtain who the message was sent to in direct conversations, 
- * it is necessary to do it using the same table, 
- * as it is the only possible way to relate them.
- * This method will be called many times, 
- * which is why it is memoized.
+ * Find the receiver of the messages using a reflexive relationship. 
+ * This case is useful when the other person starts the conversation.
  */
 const findChatReceiver = memoize(
   ({ chatId }) => chatId,
@@ -251,6 +248,60 @@ const findChatReceiver = memoize(
   }
 )
 
+/**
+ * Find the recipient of a message in direct messages; 
+ * in this case, it is used when the conversation 
+ * is started by someone other than the user or the device.
+ */
+const findMemberReceiver = memoize(
+  ({ chatId }) => chatId,
+  async ({ database, chatId }) => {
+    const membersTableNames = await queryAll({
+      database,
+      sql: `SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'z_%members';`
+    })
+
+    const membersByTables = await parallel(
+      async (table) => {
+        const tableName = table?.name
+
+        if(!tableName) return []
+
+        const columns = await queryAll({
+          database,
+          sql: `PRAGMA table_info(${tableName});`,
+        });
+
+        const chatIdColum = columns.find(column => column?.name?.includes("CHATS"))?.name
+        const userIdColum = columns.find(column => column?.name?.includes("MEMBERS"))?.name
+
+        if(!chatIdColum || !userIdColum) return []
+
+        return queryAll({
+          database,
+          sql: `
+          SELECT 
+            m.${chatIdColum} AS ChatId, 
+            m.${userIdColum} AS ReceiverId, 
+            u.zname AS ReceiverName 
+          FROM 
+            ${tableName} m
+          JOIN 
+            ZUSER u 
+          ON 
+            m.${userIdColum} = u.Z_PK
+          WHERE 
+            m.${chatIdColum} = ${chatId};
+          `
+        });
+
+      }, membersTableNames
+    )
+
+    const receiver = membersByTables.flat().find(receiver => receiver.ChatId === chatId);
+    return receiver
+  }
+)
 
 const findUsersByChat = async ({ usersGroupDatabase, chatExternalId }) => {
   /*
@@ -339,6 +390,17 @@ const format = async ({ database, messages, users, usersByChat }) => {
   }, messages);
 };
 
+/**
+ * 
+ * The case of obtaining the other person is somewhat complex because it has some very specific use cases. 
+ * The first one is that if the person starts the conversation, 
+ * it is stored in zmessages, meaning a reflexive relationship is used. 
+ * In the case where the user is the one who starts the conversation, it is stored in dynamic tables called z_<N>MEMBER.
+ * To obtain who the message was sent to in direct conversations,
+ * 
+ * This method will be called many times, 
+ * which is why it is memoized.
+ */
 const getReceiverName = async ({
   database,
   message,
@@ -356,11 +418,26 @@ const getReceiverName = async ({
     return null;
   }
 
-  const receiver = await findChatReceiver({
+  // Receiver from chat (when receiver start conversation)
+  const chatReceiver = await findChatReceiver({
     database, 
     chatId: message.ChatID
   })
 
-  return receiver?.SenderName ?? 'UNKNOWN'
+  if(chatReceiver?.SenderName) {
+    return chatReceiver?.SenderName
+  }
+
+  // Receiver from members (when phone user start conversation)
+  const receiver = await findMemberReceiver({ 
+    database, 
+    chatId: message.ChatID 
+  })
+
+  if(receiver?.ReceiverName) {
+    return receiver?.ReceiverName
+  }
+
+  return 'UNKNOWN'
   
 };
