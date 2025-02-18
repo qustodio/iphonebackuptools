@@ -5,6 +5,17 @@ const apple_timestamp = require('../../util/apple_timestamp')
 const CALLS_DB = '2b2b0084a1bc3a5ac8c27afdf14afb42c61a19ca'
 const CALLS2_DB = fileHash('Library/CallHistoryDB/CallHistory.storedata')
 
+const callTypes = {
+  phone: 'com.apple.Telephony'
+}
+
+/*
+Until a new business decision is made,
+only telephone calls will be retrieved,
+excluding third-party applications. It is important to note that
+starting from iOS 7, it is possible to identify the service provider,
+allowing for filtering. However, in earlier versions, this is not possible.
+*/
 module.exports = {
   version: 4,
   name: 'phone.calls',
@@ -76,6 +87,7 @@ function getCallsList (backup) {
 function getCallsListiOS7 (backup) {
   return new Promise((resolve, reject) => {
     // Attempt to open database.
+    // iOS 6 and earlier versions do not explicitly store the type of service.
     backup.openDatabase(CALLS_DB)
       .then(db => {
         db.all(`
@@ -106,7 +118,12 @@ function getCallsListLater (backup) {
   return new Promise((resolve, reject) => {
     backup.openDatabase(CALLS2_DB)
       .then(db => {
-        db.all(`SELECT *, ${apple_timestamp.parse('ZDATE')} AS XFORMATTEDDATESTRING from ZCALLRECORD ORDER BY ZDATE ASC`, async function (err, rows) {
+        db.all(`
+          SELECT *, ${apple_timestamp.parse('ZDATE')} AS XFORMATTEDDATESTRING 
+          from ZCALLRECORD 
+          WHERE ZSERVICE_PROVIDER = '${callTypes.phone}' 
+          ORDER BY ZDATE ASC`,
+        async function (err, rows) {
           if (err) reject(err)
 
           resolve(rows)
