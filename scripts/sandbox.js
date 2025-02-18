@@ -1,6 +1,7 @@
 const bt = require('../tools/index')
 const env = require('dotenv')
 const { join } = require('path')
+const log = require('../tools/util/log')
 
 const unixTSFromToday = () => {
   const currentDate = new Date()
@@ -11,6 +12,8 @@ const unixTSFromToday = () => {
 }
 
 const main = async ({ BACKUP_PATH, APPLE_UDID, PASSWORD_BACKUP }) => {
+  log.setVerbose(2)
+
   await bt.configure({
     base: BACKUP_PATH,
     id: APPLE_UDID,
