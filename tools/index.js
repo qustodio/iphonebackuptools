@@ -242,6 +242,7 @@ async function configure ({ base, id, password }) {
 async function releaseConnections ({ base, id, password }) {
   const backup = new Backup(base, id, password)
   await backup.closeAllOpenDBs()
+  Backup.destroy()
 }
 
 module.exports = {

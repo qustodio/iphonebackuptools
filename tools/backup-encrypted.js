@@ -61,6 +61,10 @@ class BackupEncrypted {
     BackupEncrypted.instance = this
   }
 
+  static destroy () {
+    BackupEncrypted.instance = null
+  }
+
   async load () {
     this.manifest = await this.readManifest()
     const backupKeyBag = this.manifest['BackupKeyBag']
