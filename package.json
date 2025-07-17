@@ -30,7 +30,7 @@
     "json2csv": "^3.11.5",
     "jspack": "^0.0.4",
     "pbkdf2-hmac": "^1.2.1",
-    "plist": "^2.1.0",
+    "plist": "^3.0.2",
     "qunpack": "^0.5.2",
     "sqlite3": "5.1.6",
     "stat-mode": "^1.0.0",
