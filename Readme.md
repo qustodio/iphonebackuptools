@@ -11,6 +11,10 @@ The modifications allows you to obtain information from an encrypted backup, **b
 ### How does this fork work?
 It decrypts the manifest into a file named manifest-un and then, for each report query, it opens a database by reading the decrypted manifest to obtain the file ID and subsequently consults it with MySQLLite.
 
+### Changes
+
+* **2026-03-23** - Project reviewed and validated for continued use with encrypted backups.
+
 ### Support and type definitions for TypeScript are also added for the reports.
 
 * backups.list
